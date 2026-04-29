@@ -11,6 +11,7 @@ import {
   RefreshCw,
   SearchCode,
   ShieldCheck,
+  Trash2,
   Upload,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, useTransition, type ChangeEvent } from 'react'
@@ -25,6 +26,7 @@ import type { CodeLine, DiffResult, ErrorFinding, ReviewSummary } from './types'
 
 type MonacoApi = typeof Monaco
 type TabKey = 'summary' | 'errors' | 'review'
+type DashboardSection = 'workspace' | 'analysis'
 
 interface EditorPanelProps {
   title: string
@@ -38,6 +40,7 @@ interface EditorPanelProps {
   tone: 'original' | 'new'
   lineCount: number
   onChange: (value: string) => void
+  onDelete: () => void
   onUpload: (event: ChangeEvent<HTMLInputElement>) => void
   onMount: OnMount
   beforeMount: BeforeMount
@@ -112,6 +115,25 @@ const LANGUAGE_OPTIONS = [
   'java',
 ] as const
 
+type LanguageOption = (typeof LANGUAGE_OPTIONS)[number]
+
+const LANGUAGE_FILE_EXTENSIONS: Record<LanguageOption, string> = {
+  css: 'css',
+  go: 'go',
+  html: 'html',
+  java: 'java',
+  javascript: 'js',
+  json: 'json',
+  jsx: 'jsx',
+  plaintext: 'txt',
+  python: 'py',
+  rust: 'rs',
+  tsx: 'tsx',
+  typescript: 'ts',
+}
+
+const GENERATED_FILE_EXTENSIONS = new Set(Object.values(LANGUAGE_FILE_EXTENSIONS))
+
 const TABS: Array<{ id: TabKey; label: string }> = [
   { id: 'summary', label: 'Diff Summary' },
   { id: 'errors', label: 'Possible Errors' },
@@ -174,6 +196,19 @@ function inferLanguageFromFile(fileName: string) {
   }
 
   return extension ? map[extension] : undefined
+}
+
+function getGeneratedFileName(baseName: 'original' | 'modified', language: string) {
+  return `${baseName}.${LANGUAGE_FILE_EXTENSIONS[language as LanguageOption] ?? 'txt'}`
+}
+
+function getDisplayFileName(fileName: string, baseName: 'original' | 'modified', language: string) {
+  const normalizedFileName = fileName.trim().toLowerCase()
+  const extension = normalizedFileName.split('.').pop()
+  const isGeneratedName = normalizedFileName === baseName
+    || (normalizedFileName.startsWith(`${baseName}.`) && !!extension && GENERATED_FILE_EXTENSIONS.has(extension))
+
+  return isGeneratedName ? getGeneratedFileName(baseName, language) : fileName
 }
 
 function inferLanguageFromCode(code: string) {
@@ -497,6 +532,7 @@ function EditorPanel({
   tone,
   lineCount,
   onChange,
+  onDelete,
   onUpload,
   onMount,
   beforeMount,
@@ -518,8 +554,8 @@ function EditorPanel({
   }
 
   return (
-    <Card className="flex min-h-[560px] min-w-0 flex-col overflow-hidden bg-code text-white shadow-hard-lg xl:h-full">
-      <Card.Header className="flex flex-col gap-3 bg-card text-foreground sm:flex-row sm:items-center sm:justify-between">
+    <Card className="flex min-w-0 flex-col overflow-hidden bg-code text-white shadow-hard-lg">
+      <Card.Header className="flex flex-col gap-3 bg-card p-3 text-foreground sm:flex-row sm:items-center sm:justify-between xl:flex-col xl:items-start xl:justify-start min-[1816px]:flex-row min-[1816px]:items-center min-[1816px]:justify-between min-[1816px]:p-4">
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <Card.Title className="text-lg">{title}</Card.Title>
@@ -534,17 +570,26 @@ function EditorPanel({
           </div>
           <Card.Description>{description}</Card.Description>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 xl:grid xl:w-full xl:grid-cols-3 min-[1816px]:flex min-[1816px]:w-auto">
           <Button
             variant="outline"
             size="sm"
-            className="w-fit bg-background text-foreground"
+            className="w-fit bg-background text-foreground xl:w-full min-[1816px]:w-fit"
             disabled={readOnly}
             onClick={pasteFromClipboard}
           >
             <Clipboard className="size-4" /> {pasteStatus}
           </Button>
-          <Button asChild variant="outline" size="sm" className="w-fit bg-background text-foreground">
+          <Button
+            variant="danger"
+            size="sm"
+            className="w-fit xl:w-full min-[1816px]:w-fit"
+            disabled={readOnly}
+            onClick={onDelete}
+          >
+            <Trash2 className="size-4" /> Delete
+          </Button>
+          <Button asChild variant="outline" size="sm" className="w-fit bg-background text-foreground xl:w-full min-[1816px]:w-fit">
             <label>
               <Upload className="size-4" /> Upload
               <input
@@ -557,17 +602,17 @@ function EditorPanel({
           </Button>
         </div>
       </Card.Header>
-      <div className="border-b-2 border-border bg-zinc-950 px-4 py-2 font-mono text-xs text-zinc-400">
+      <div className="border-x-2 border-t-2 border-b border-white border-b-white/20 bg-zinc-950 px-3 py-2 font-mono text-xs text-zinc-400 min-[1816px]:px-4">
         {fileName} · Monaco · {language}
       </div>
-      <div className="border-b-2 border-border bg-zinc-900 px-4 py-2 text-xs text-zinc-300 lg:hidden">
+      <div className="border-x-2 border-b border-white border-b-white/20 bg-zinc-900 px-4 py-2 text-xs text-zinc-300 lg:hidden">
         Mobile paste mode: tap the box below, then use your keyboard paste action or the Paste button.
       </div>
       <textarea
         aria-label={`${title} mobile paste editor`}
         autoCapitalize="off"
         autoCorrect="off"
-        className="min-h-[420px] w-full flex-1 resize-y border-0 bg-[#101014] p-4 font-mono text-sm leading-6 text-zinc-100 outline-none placeholder:text-zinc-500 disabled:opacity-100 lg:hidden"
+        className="min-h-[360px] w-full resize-y border-x-2 border-b-2 border-white bg-[#101014] p-4 font-mono text-sm leading-6 text-zinc-100 outline-none placeholder:text-zinc-500 disabled:opacity-100 lg:hidden"
         disabled={readOnly}
         onChange={(event) => {
           if (!readOnly) onChange(event.target.value)
@@ -576,7 +621,7 @@ function EditorPanel({
         spellCheck={false}
         value={value}
       />
-      <div className="hidden min-h-[480px] flex-1 overflow-hidden bg-[#101014] lg:block">
+      <div className="hidden h-[clamp(390px,calc(44vh+50px),550px)] overflow-hidden border-x-2 border-b-2 border-white bg-[#101014] lg:block">
         <Editor
           beforeMount={beforeMount}
           height="100%"
@@ -609,7 +654,15 @@ function StatCard({ label, value, tone }: { label: string; value: number; tone: 
   )
 }
 
-function DiffLine({ line, side }: { line?: CodeLine; side: 'original' | 'new' }) {
+function DiffLine({
+  line,
+  side,
+  className,
+}: {
+  line?: CodeLine
+  side: 'original' | 'new'
+  className?: string
+}) {
   const effectiveType = line?.risk ? 'risky' : line?.type ?? 'empty'
   const typeClass = {
     added: 'border-success/60 bg-success/15',
@@ -628,9 +681,12 @@ function DiffLine({ line, side }: { line?: CodeLine; side: 'original' | 'new' })
     unchanged: ' ',
   }[effectiveType]
   const placeholder = side === 'new' ? 'deleted from new version' : 'added in new version'
+  const content = line?.content || (line?.type === 'empty' ? placeholder : ' ')
+  const leadingIndent = line?.content.match(/^[\t ]*/)?.[0] ?? ''
+  const indentWidth = [...leadingIndent].reduce((width, character) => width + (character === '\t' ? 2 : 1), 0)
 
   return (
-    <div className={cn('grid grid-cols-[2rem_3.25rem_1fr] border-b border-border/60 font-mono text-xs', typeClass)}>
+    <div className={cn('grid min-w-0 grid-cols-[2rem_3.25rem_minmax(0,1fr)] border-b border-border/60 font-mono text-xs', typeClass, className)}>
       <span className="select-none border-r border-border/60 px-2 py-1 text-center font-bold">
         {symbol}
       </span>
@@ -638,12 +694,20 @@ function DiffLine({ line, side }: { line?: CodeLine; side: 'original' | 'new' })
         {line?.lineNumber ?? '·'}
       </span>
       <code
+        style={
+          indentWidth > 0
+            ? {
+                paddingLeft: `calc(0.5rem + ${indentWidth}ch)`,
+                textIndent: `-${indentWidth}ch`,
+              }
+            : undefined
+        }
         className={cn(
-          'min-h-7 overflow-x-auto whitespace-pre px-2 py-1 text-left',
+          'min-h-7 min-w-0 whitespace-pre-wrap break-words px-2 py-1 text-left [overflow-wrap:anywhere] [tab-size:2]',
           line?.type === 'empty' && 'italic text-muted-foreground',
         )}
       >
-        {line?.content || (line?.type === 'empty' ? placeholder : ' ')}
+        {content}
       </code>
     </div>
   )
@@ -666,17 +730,13 @@ function AlignedDiffView({ diffResult }: { diffResult: DiffResult | null }) {
         <div className="border-b-2 border-border p-2 md:border-b-0 md:border-r-2">Original aligned view</div>
         <div className="p-2">New aligned view</div>
       </div>
-      <div className="grid min-h-[420px] max-h-[min(70vh,760px)] grid-cols-1 overflow-auto md:grid-cols-2">
-        <div className="border-b-2 border-border md:border-b-0 md:border-r-2">
-          {visibleRows.map((row) => (
-            <DiffLine key={row.left.id} line={row.left} side="original" />
-          ))}
-        </div>
-        <div>
-          {visibleRows.map((row) => (
-            <DiffLine key={row.right.id} line={row.right} side="new" />
-          ))}
-        </div>
+      <div className="min-h-[420px] max-h-[min(70vh,760px)] overflow-y-auto overflow-x-hidden">
+        {visibleRows.map((row) => (
+          <div key={row.left.id} className="grid grid-cols-1 md:grid-cols-2">
+            <DiffLine className="md:border-r-2 md:border-border" line={row.left} side="original" />
+            <DiffLine line={row.right} side="new" />
+          </div>
+        ))}
       </div>
       {rows.length > visibleRows.length ? (
         <div className="border-t-2 border-border bg-muted p-3 text-sm text-muted-foreground">
@@ -922,6 +982,7 @@ function App() {
     return { findings: initialState.findings, review: initialState.review }
   })
   const [activeTab, setActiveTab] = useState<TabKey>('summary')
+  const [activeSection, setActiveSection] = useState<DashboardSection>('workspace')
   const [syncScroll, setSyncScroll] = useState(true)
   const [hoverTipsEnabled, setHoverTipsEnabled] = useState(true)
   const [changedOnlyMode, setChangedOnlyMode] = useState(false)
@@ -1082,6 +1143,7 @@ function App() {
       setDiffResult(nextDiff)
       setAnalysis({ findings: nextAnalysis.findings, review: nextAnalysis.review })
       setActiveTab(nextTab)
+      setActiveSection('analysis')
     })
   }
 
@@ -1093,6 +1155,7 @@ function App() {
     setDiffResult(null)
     setAnalysis({ findings: [], review: null })
     setActiveTab('summary')
+    setActiveSection('workspace')
   }
 
   async function uploadFile(side: 'original' | 'new', event: ChangeEvent<HTMLInputElement>) {
@@ -1183,12 +1246,18 @@ function App() {
     ]
   }
 
-  function navigateDashboard(sectionId: 'workspace' | 'analysis', tab?: TabKey) {
+  function navigateDashboard(sectionId: DashboardSection, tab?: TabKey) {
+    setActiveSection(sectionId)
     if (tab) setActiveTab(tab)
 
     window.setTimeout(() => {
       document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, 0)
+  }
+
+  function selectAnalysisTab(tab: TabKey) {
+    setActiveTab(tab)
+    setActiveSection('analysis')
   }
 
   function toggleHoverTips() {
@@ -1212,11 +1281,27 @@ function App() {
     setNewCode(value)
   }
 
+  function deleteOriginalCode() {
+    setOriginalCode('')
+    setOriginalFileName('original')
+    setDiffTooltip(null)
+  }
+
+  function deleteNewCode() {
+    setNewCode('')
+    setNewFileName('modified')
+    setChangedOnlyMode(false)
+    changedOnlyModeRef.current = false
+    setDiffTooltip(null)
+  }
+
   const errorCount = analysis.findings.filter((finding) => finding.severity === 'error').length
   const warningCount = analysis.findings.filter((finding) => finding.severity === 'warning').length
   const currentOriginalLineCount = getLineCount(originalCode)
   const currentNewLineCount = getLineCount(newCode)
   const language = detectLanguage(originalCode, newCode, originalFileName, newFileName)
+  const originalDisplayFileName = getDisplayFileName(originalFileName, 'original', language)
+  const newDisplayFileName = getDisplayFileName(newFileName, 'modified', language)
   const changedOnlyNewView = useMemo(
     () => buildChangedOnlyView(diffResult),
     [diffResult],
@@ -1241,8 +1326,8 @@ function App() {
 
   return (
     <main className="min-h-screen bg-background bg-grid bg-[length:32px_32px] text-foreground lg:h-screen lg:overflow-hidden">
-      <section className="grid h-full w-full gap-4 p-3 sm:p-4 lg:grid-cols-[17rem_minmax(0,1fr)]">
-        <aside className="rounded-2xl border-2 border-border bg-card p-4 shadow-hard-lg lg:h-[calc(100vh-2rem)] lg:overflow-auto">
+      <section className="grid h-full w-full gap-3 p-3 sm:p-4 lg:grid-cols-[15rem_minmax(0,1fr)] lg:p-3 min-[1816px]:grid-cols-[17rem_minmax(0,1fr)] min-[1816px]:gap-4 min-[1816px]:p-4">
+        <aside className="rounded-2xl border-2 border-border bg-card p-3 shadow-hard-lg lg:h-[calc(100vh-2rem)] lg:overflow-auto min-[1816px]:p-4">
           <div className="flex items-center gap-3 border-b-2 border-border pb-4">
             <div className="grid size-11 shrink-0 place-items-center rounded-lg border-2 border-border bg-primary text-primary-foreground shadow-hard-sm">
               <SearchCode className="size-5" />
@@ -1258,7 +1343,7 @@ function App() {
           <nav aria-label="Dashboard navigation" className="mt-4 grid gap-2">
             {dashboardNavItems.map((item) => {
               const Icon = item.icon
-              const active = item.tab ? activeTab === item.tab : false
+              const active = item.section === activeSection && (item.tab ? activeTab === item.tab : true)
 
               return (
                 <button
@@ -1359,7 +1444,7 @@ function App() {
 
         </aside>
 
-        <div className="min-w-0 space-y-4 lg:h-[calc(100vh-2rem)] lg:overflow-auto lg:pr-2">
+        <div className="min-w-0 space-y-4 lg:h-[calc(100vh-2rem)] lg:overflow-auto min-[1816px]:pr-2">
           <header className="rounded-2xl border-2 border-border bg-card p-3 shadow-hard-lg sm:p-4">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div>
@@ -1397,14 +1482,15 @@ function App() {
             </div>
           </header>
 
-          <section id="workspace" className="scroll-mt-4 grid min-h-[calc(100vh-17rem)] gap-4 xl:grid-cols-2">
+          <section id="workspace" className="scroll-mt-4 grid items-start gap-3 xl:grid-cols-2 min-[1816px]:gap-4">
             <EditorPanel
               beforeMount={beforeMount}
               description="Paste the baseline or upload the previous file."
-              fileName={originalFileName}
+              fileName={originalDisplayFileName}
               language={language}
               lineCount={currentOriginalLineCount}
               onChange={setOriginalCode}
+              onDelete={deleteOriginalCode}
               onMount={handleOriginalMount}
               onUpload={(event) => uploadFile('original', event)}
               title="Original Code"
@@ -1414,12 +1500,13 @@ function App() {
             <EditorPanel
               beforeMount={beforeMount}
               description="Paste the edited version you want to debug and review."
-              fileName={newFileName}
+              fileName={newDisplayFileName}
               language={language}
               lineNumberMap={changedOnlyMode ? changedOnlyNewView.lineMap : undefined}
               lineCount={visibleNewLineCount}
               modeLabel={changedOnlyMode ? 'Changed only' : undefined}
               onChange={updateNewCode}
+              onDelete={deleteNewCode}
               onMount={handleNewMount}
               onUpload={(event) => uploadFile('new', event)}
               readOnly={changedOnlyMode}
@@ -1458,7 +1545,7 @@ function App() {
             <Card.Content className="space-y-4">
               <div className="flex flex-wrap gap-2">
                 {TABS.map((tab) => (
-                  <TabButton key={tab.id} active={activeTab === tab.id} onClick={() => setActiveTab(tab.id)}>
+                  <TabButton key={tab.id} active={activeTab === tab.id} onClick={() => selectAnalysisTab(tab.id)}>
                     {tab.label}
                   </TabButton>
                 ))}
