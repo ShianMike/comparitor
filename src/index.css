@@ -1,0 +1,173 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Space+Mono:wght@400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 48 100% 94%;
+  --foreground: 240 9% 8%;
+  --card: 0 0% 100%;
+  --border: 240 9% 8%;
+  --muted: 48 75% 88%;
+  --muted-foreground: 240 5% 34%;
+  --primary: 217 91% 60%;
+  --primary-hover: 217 91% 54%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 51 100% 62%;
+  --secondary-hover: 45 100% 55%;
+  --secondary-foreground: 240 9% 8%;
+  --accent: 329 86% 70%;
+  --destructive: 0 84% 55%;
+  --success: 142 76% 48%;
+  --warning: 38 96% 56%;
+  --code: 240 10% 8%;
+  --shadow-color: #09090b;
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background: hsl(var(--secondary));
+  color: hsl(var(--foreground));
+}
+
+.monaco-editor .diff-line-added,
+.monaco-editor .diff-line-removed,
+.monaco-editor .diff-line-modified,
+.monaco-editor .diff-line-risky {
+  background: transparent !important;
+  border: 0 !important;
+  outline: 0 !important;
+}
+
+.monaco-editor .glyph-margin-widgets .diff-line-added,
+.monaco-editor .glyph-margin-widgets .diff-line-removed,
+.monaco-editor .glyph-margin-widgets .diff-line-modified,
+.monaco-editor .glyph-margin-widgets .diff-glyph-risky,
+.monaco-editor .glyph-margin-widgets .diff-glyph-missing {
+  background: transparent !important;
+  border: 0 !important;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.monaco-editor .glyph-margin-widgets .diff-line-added::before,
+.monaco-editor .glyph-margin-widgets .diff-line-removed::before,
+.monaco-editor .glyph-margin-widgets .diff-line-modified::before,
+.monaco-editor .glyph-margin-widgets .diff-glyph-risky::before,
+.monaco-editor .glyph-margin-widgets .diff-glyph-missing::before {
+  content: '';
+  display: block;
+  height: 100%;
+  width: 4px;
+}
+
+.monaco-editor .glyph-margin-widgets .diff-line-added::before {
+  background: #22c55e;
+}
+
+.monaco-editor .glyph-margin-widgets .diff-line-removed::before,
+.monaco-editor .glyph-margin-widgets .diff-glyph-missing::before {
+  background: #ef4444;
+}
+
+.monaco-editor .glyph-margin-widgets .diff-line-modified::before {
+  background: #facc15;
+}
+
+.monaco-editor .glyph-margin-widgets .diff-glyph-risky::before {
+  background: #f59e0b;
+}
+
+.monaco-editor .view-overlays .current-line,
+.monaco-editor .margin-view-overlays .current-line-margin {
+  background: rgba(255, 255, 255, 0.075) !important;
+  border: 0 !important;
+}
+
+.monaco-hover,
+.monaco-editor .monaco-hover {
+  z-index: 10000 !important;
+}
+
+.monaco-hover .monaco-hover-content,
+.monaco-hover .hover-contents,
+.monaco-hover .markdown-hover {
+  background: hsl(var(--card)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.monaco-hover .monaco-hover-content {
+  border: 2px solid hsl(var(--border)) !important;
+  border-radius: 10px !important;
+  box-shadow: 8px 8px 0 #09090b !important;
+  max-width: min(680px, calc(100vw - 48px)) !important;
+  padding: 12px !important;
+}
+
+.monaco-hover .markdown-hover,
+.monaco-hover .hover-contents,
+.monaco-hover .hover-row,
+.monaco-hover p,
+.monaco-hover span {
+  color: hsl(var(--foreground)) !important;
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+}
+
+.monaco-hover strong {
+  color: hsl(var(--foreground)) !important;
+  font-family: 'Archivo Black', Impact, sans-serif !important;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.monaco-hover pre,
+.monaco-hover code {
+  background: #101014 !important;
+  border: 1px solid #3f3f46 !important;
+  border-radius: 6px !important;
+  color: #f8fafc !important;
+  font-family: 'Space Mono', ui-monospace, monospace !important;
+}
+
+.monaco-hover pre {
+  margin: 8px 0 !important;
+  max-height: 220px !important;
+  overflow: auto !important;
+  padding: 10px !important;
+}
+
+.monaco-hover a,
+.monaco-hover .action-container a {
+  color: hsl(var(--primary)) !important;
+  font-weight: 700 !important;
+}
+
+.monaco-editor .squiggly-error,
+.monaco-editor .squiggly-warning,
+.monaco-editor .squiggly-info {
+  text-decoration-thickness: 2px;
+}
