@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   Bug,
   ChevronDown,
+  Clipboard,
   Code2,
   FileCode2,
   GitCompareArrows,
@@ -500,6 +501,22 @@ function EditorPanel({
   onMount,
   beforeMount,
 }: EditorPanelProps) {
+  const [pasteStatus, setPasteStatus] = useState('Paste')
+
+  async function pasteFromClipboard() {
+    if (readOnly) return
+
+    try {
+      const clipboardText = await navigator.clipboard.readText()
+      onChange(clipboardText)
+      setPasteStatus('Pasted')
+      window.setTimeout(() => setPasteStatus('Paste'), 1400)
+    } catch {
+      setPasteStatus('Use text box')
+      window.setTimeout(() => setPasteStatus('Paste'), 1800)
+    }
+  }
+
   return (
     <Card className="flex min-h-[560px] min-w-0 flex-col overflow-hidden bg-code text-white shadow-hard-lg xl:h-full">
       <Card.Header className="flex flex-col gap-3 bg-card text-foreground sm:flex-row sm:items-center sm:justify-between">
@@ -517,22 +534,49 @@ function EditorPanel({
           </div>
           <Card.Description>{description}</Card.Description>
         </div>
-        <Button asChild variant="outline" size="sm" className="w-fit bg-background text-foreground">
-          <label>
-            <Upload className="size-4" /> Upload
-            <input
-              className="sr-only"
-              type="file"
-              accept=".js,.jsx,.ts,.tsx,.json,.css,.html,.py,.go,.rs,.java,.txt,.md"
-              onChange={onUpload}
-            />
-          </label>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-fit bg-background text-foreground"
+            disabled={readOnly}
+            onClick={pasteFromClipboard}
+          >
+            <Clipboard className="size-4" /> {pasteStatus}
+          </Button>
+          <Button asChild variant="outline" size="sm" className="w-fit bg-background text-foreground">
+            <label>
+              <Upload className="size-4" /> Upload
+              <input
+                className="sr-only"
+                type="file"
+                accept=".js,.jsx,.ts,.tsx,.json,.css,.html,.py,.go,.rs,.java,.txt,.md"
+                onChange={onUpload}
+              />
+            </label>
+          </Button>
+        </div>
       </Card.Header>
       <div className="border-b-2 border-border bg-zinc-950 px-4 py-2 font-mono text-xs text-zinc-400">
         {fileName} · Monaco · {language}
       </div>
-      <div className="min-h-[480px] flex-1 overflow-hidden bg-[#101014]">
+      <div className="border-b-2 border-border bg-zinc-900 px-4 py-2 text-xs text-zinc-300 lg:hidden">
+        Mobile paste mode: tap the box below, then use your keyboard paste action or the Paste button.
+      </div>
+      <textarea
+        aria-label={`${title} mobile paste editor`}
+        autoCapitalize="off"
+        autoCorrect="off"
+        className="min-h-[420px] w-full flex-1 resize-y border-0 bg-[#101014] p-4 font-mono text-sm leading-6 text-zinc-100 outline-none placeholder:text-zinc-500 disabled:opacity-100 lg:hidden"
+        disabled={readOnly}
+        onChange={(event) => {
+          if (!readOnly) onChange(event.target.value)
+        }}
+        placeholder={`Paste ${title.toLowerCase()} here...`}
+        spellCheck={false}
+        value={value}
+      />
+      <div className="hidden min-h-[480px] flex-1 overflow-hidden bg-[#101014] lg:block">
         <Editor
           beforeMount={beforeMount}
           height="100%"
